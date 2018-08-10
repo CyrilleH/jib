@@ -27,10 +27,13 @@ import java.nio.file.Paths;
 
 public class HelloWorld {
 
-  public static void main(String[] args) throws URISyntaxException, IOException {
+  public static void main(String[] args) throws Exception {
     Path worldFile = Paths.get(Resources.getResource("world").toURI());
     String world = new String(Files.readAllBytes(worldFile), StandardCharsets.UTF_8);
 
-    System.out.println("Hello " + world);
+    while (true) {
+      System.out.println("Hello " + world);
+      Thread.sleep(5000);
+    }
   }
 }

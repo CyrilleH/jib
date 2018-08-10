@@ -97,7 +97,7 @@ class PushBlobStep implements AsyncStep<BlobDescriptor>, Callable<BlobDescriptor
               .equals(buildConfiguration.getTargetImageConfiguration().getImageRegistry());
       String mountFrom =
           sameRegistry ? buildConfiguration.getBaseImageConfiguration().getImageRepository() : null;
-      registryClient.pushBlob(blobDescriptor.getDigest(), blob, mountFrom);
+      registryClient.pushBlob(blobDescriptor.getDigest(), blob, null);
 
       return blobDescriptor;
     }
