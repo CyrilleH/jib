@@ -7,7 +7,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <jib-maven-plugin.version>0.9.8</jib-maven-plugin.version>
+    <jib-maven-plugin.version>0.9.9-SNAPSHOT</jib-maven-plugin.version>
     <maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
   </properties>
 
@@ -37,8 +37,11 @@
         <artifactId>jib-maven-plugin</artifactId>
         <version>${jib-maven-plugin.version}</version>
         <configuration>
+          <from>
+            <image>openjdk:8-jdk-alpine</image>
+          </from>
           <to>
-            <image>gcr.io/REPLACE-WITH-YOUR-GCP-PROJECT/image-built-with-jib</image>
+            <image>gcr.io/jane/doe</image>
           </to>
         </configuration>
         <executions>
