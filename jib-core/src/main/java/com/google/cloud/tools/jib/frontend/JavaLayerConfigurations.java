@@ -27,27 +27,39 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.Nullable;
 
 /** Builds {@link LayerConfiguration}s for a Java application. */
 public class JavaLayerConfigurations {
+  private static final String WEBAPP_LIB = "/WEB-INF/lib";
+  private static final String WEBAPP_CLASSES = "/WEB-INF/classes";
 
   /** Represents the different types of layers for a Java application. */
   @VisibleForTesting
   enum LayerType {
-    DEPENDENCIES("dependencies", JavaEntrypointConstructor.DEFAULT_DEPENDENCIES_PATH_ON_IMAGE),
+    DEPENDENCIES(
+        "dependencies", JavaEntrypointConstructor.DEFAULT_DEPENDENCIES_PATH_ON_IMAGE, WEBAPP_LIB),
     SNAPSHOT_DEPENDENCIES(
-        "snapshot dependencies", JavaEntrypointConstructor.DEFAULT_DEPENDENCIES_PATH_ON_IMAGE),
-    RESOURCES("resources", JavaEntrypointConstructor.DEFAULT_RESOURCES_PATH_ON_IMAGE),
-    CLASSES("classes", JavaEntrypointConstructor.DEFAULT_CLASSES_PATH_ON_IMAGE),
-    EXTRA_FILES("extra files", "/");
+        "snapshot dependencies",
+        JavaEntrypointConstructor.DEFAULT_DEPENDENCIES_PATH_ON_IMAGE,
+        WEBAPP_LIB),
+    RESOURCES(
+        "resources", JavaEntrypointConstructor.DEFAULT_RESOURCES_PATH_ON_IMAGE, WEBAPP_CLASSES),
+    META_INF("meta-inf", "/app/META-INF", "/META-INF"),
+    WEB_INF("web-inf", "/app/WEB-INF", "/WEB-INF"),
+    WEB_APP("webapp", "/app", "/"),
+    CLASSES("classes", JavaEntrypointConstructor.DEFAULT_CLASSES_PATH_ON_IMAGE, WEBAPP_CLASSES),
+    EXTRA_FILES("extra files", "/", null); // not relative to the webapp root
 
     private final String label;
     private final String extractionPath;
+    @Nullable private final String webAppExtractionRelativePath;
 
     /** Initializes with a label for the layer and the layer files' default extraction path root. */
-    LayerType(String label, String extractionPath) {
+    LayerType(String label, String extractionPath, @Nullable final String webappExtractionPath) {
       this.label = label;
       this.extractionPath = extractionPath;
+      this.webAppExtractionRelativePath = webappExtractionPath;
     }
 
     @VisibleForTesting
@@ -59,12 +71,19 @@ public class JavaLayerConfigurations {
     String getExtractionPath() {
       return extractionPath;
     }
+
+    @VisibleForTesting
+    @Nullable
+    String getWebAppExtractionRelativePath() {
+      return webAppExtractionRelativePath;
+    }
   }
 
   /** Builds with each layer's files. */
   public static class Builder {
 
     private final Map<LayerType, List<Path>> layerFilesMap = new EnumMap<>(LayerType.class);
+    private @Nullable String webAppRoot = null;
 
     private Builder() {
       for (LayerType layerType : LayerType.values()) {
@@ -97,6 +116,26 @@ public class JavaLayerConfigurations {
       return this;
     }
 
+    public Builder setWebAppFiles(List<Path> webAppFiles) {
+      layerFilesMap.put(LayerType.WEB_APP, webAppFiles);
+      return this;
+    }
+
+    public Builder setMetaInfFiles(List<Path> metaInfFiles) {
+      layerFilesMap.put(LayerType.META_INF, metaInfFiles);
+      return this;
+    }
+
+    public Builder setWebInfFiles(List<Path> webInfFiles) {
+      layerFilesMap.put(LayerType.WEB_INF, webInfFiles);
+      return this;
+    }
+
+    public Builder setWebAppRoot(@Nullable final String webAppRoot) {
+      this.webAppRoot = webAppRoot;
+      return this;
+    }
+
     public JavaLayerConfigurations build() {
       ImmutableMap.Builder<LayerType, LayerConfiguration> layerConfigurationsMap =
           ImmutableMap.builderWithExpectedSize(LayerType.values().length);
@@ -105,7 +144,11 @@ public class JavaLayerConfigurations {
         layerConfigurationsMap.put(
             layerType,
             LayerConfiguration.builder()
-                .addEntry(layerFiles, layerType.getExtractionPath())
+                .addEntry(
+                    layerFiles,
+                    this.webAppRoot != null && layerType.getWebAppExtractionRelativePath() != null
+                        ? webAppRoot + layerType.getWebAppExtractionRelativePath()
+                        : layerType.getExtractionPath())
                 .setLabel(layerType.getLabel())
                 .build());
       }
@@ -146,6 +189,18 @@ public class JavaLayerConfigurations {
 
   public LayerEntry getExtraFilesLayerEntry() {
     return getLayerEntry(LayerType.EXTRA_FILES);
+  }
+
+  public LayerEntry getWebAppFilesLayerEntry() {
+    return getLayerEntry(LayerType.WEB_APP);
+  }
+
+  public LayerEntry getWebInfFilesLayerEntry() {
+    return getLayerEntry(LayerType.WEB_INF);
+  }
+
+  public LayerEntry getMetaInfFilesLayerEntry() {
+    return getLayerEntry(LayerType.META_INF);
   }
 
   private LayerEntry getLayerEntry(LayerType layerType) {

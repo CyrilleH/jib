@@ -62,6 +62,9 @@ public class JavaLayerConfigurationsTest {
         Collections.singletonList(Paths.get("snapshot dependency"));
     List<Path> resourceFiles = Collections.singletonList(Paths.get("resource"));
     List<Path> classFiles = Collections.singletonList(Paths.get("class"));
+    List<Path> webAppFiles = Collections.singletonList(Paths.get("webApp"));
+    List<Path> webInfFiles = Collections.singletonList(Paths.get("webInf"));
+    List<Path> metaInfFiles = Collections.singletonList(Paths.get("metaInf"));
     List<Path> extraFiles = Collections.singletonList(Paths.get("extra file"));
 
     JavaLayerConfigurations javaLayerConfigurations =
@@ -71,11 +74,21 @@ public class JavaLayerConfigurationsTest {
             .setResourcesFiles(resourceFiles)
             .setClassesFiles(classFiles)
             .setExtraFiles(extraFiles)
+            .setWebAppFiles(webAppFiles)
+            .setMetaInfFiles(metaInfFiles)
+            .setWebInfFiles(webInfFiles)
             .build();
 
     List<List<Path>> expectedFiles =
         Arrays.asList(
-            dependencyFiles, snapshotDependencyFiles, resourceFiles, classFiles, extraFiles);
+            dependencyFiles,
+            snapshotDependencyFiles,
+            resourceFiles,
+            metaInfFiles,
+            webInfFiles,
+            webAppFiles,
+            classFiles,
+            extraFiles);
     List<List<Path>> actualFiles = new ArrayList<>();
     for (LayerConfiguration layerConfiguration : javaLayerConfigurations.getLayerConfigurations()) {
       actualFiles.add(layerConfiguration.getLayerEntries().get(0).getSourceFiles());

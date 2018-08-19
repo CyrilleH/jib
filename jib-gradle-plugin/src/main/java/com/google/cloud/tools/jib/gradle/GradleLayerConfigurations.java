@@ -26,10 +26,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import org.gradle.api.Project;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.plugins.JavaPluginConvention;
+import org.gradle.api.plugins.WarPluginConvention;
 import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.bundling.War;
 
 /** Builds {@link JavaLayerConfigurations} based on inputs from a {@link Project}. */
 class GradleLayerConfigurations {
@@ -43,11 +46,18 @@ class GradleLayerConfigurations {
    * @param project the Gradle {@link Project}
    * @param gradleJibLogger the build logger for providing feedback about the resolution
    * @param extraDirectory path to the directory for the extra files layer
+   * @param webAppRoot container path for the exploded WAR file
    * @return a {@link JavaLayerConfigurations} for the layers for the Gradle {@link Project}
    * @throws IOException if an I/O exception occurred during resolution
    */
   static JavaLayerConfigurations getForProject(
-      Project project, GradleJibLogger gradleJibLogger, Path extraDirectory) throws IOException {
+      Project project,
+      GradleJibLogger gradleJibLogger,
+      Path extraDirectory,
+      @Nullable String webAppRoot,
+      @Nullable Path metaInfDirectory,
+      @Nullable Path webInfDirectory)
+      throws IOException {
     JavaPluginConvention javaPluginConvention =
         project.getConvention().getPlugin(JavaPluginConvention.class);
 
@@ -58,23 +68,9 @@ class GradleLayerConfigurations {
     List<Path> resourcesFiles = new ArrayList<>();
     List<Path> classesFiles = new ArrayList<>();
     List<Path> extraFiles = new ArrayList<>();
-
-    // Adds each file in each classes output directory to the classes files list.
-    FileCollection classesOutputDirectories = mainSourceSet.getOutput().getClassesDirs();
-    gradleJibLogger.info("Adding corresponding output directories of source sets to image");
-    for (File classesOutputDirectory : classesOutputDirectories) {
-      if (Files.notExists(classesOutputDirectory.toPath())) {
-        gradleJibLogger.info("\t'" + classesOutputDirectory + "' (not found, skipped)");
-        continue;
-      }
-      gradleJibLogger.info("\t'" + classesOutputDirectory + "'");
-      try (Stream<Path> classFileStream = Files.list(classesOutputDirectory.toPath())) {
-        classFileStream.forEach(classesFiles::add);
-      }
-    }
-    if (classesFiles.isEmpty()) {
-      gradleJibLogger.warn("No classes files were found - did you compile your project?");
-    }
+    List<Path> webAppFiles = new ArrayList<>();
+    List<Path> metaInfFiles = new ArrayList<>();
+    List<Path> webInfFiles = new ArrayList<>();
 
     // Adds each file in the resources output directory to the resources files list.
     Path resourcesOutputDirectory = mainSourceSet.getOutput().getResourcesDir().toPath();
@@ -84,8 +80,45 @@ class GradleLayerConfigurations {
       }
     }
 
+    FileCollection allFiles;
+    FileCollection classesOutputDirectories;
+
+    final WarPluginConvention warPluginConvention =
+        project.getConvention().findPlugin(WarPluginConvention.class);
+    if (warPluginConvention != null) {
+      War war = (War) warPluginConvention.getProject().getTasks().findByName("war");
+      final Path webappOutputDirectory = warPluginConvention.getWebAppDir().toPath();
+      if (Files.exists(webappOutputDirectory)) {
+        try (Stream<Path> stream = Files.list(webappOutputDirectory)) {
+          stream.forEach(webAppFiles::add);
+        }
+      }
+      allFiles = war.getClasspath();
+      classesOutputDirectories = war.getClasspath().filter(File::isDirectory);
+    } else {
+      allFiles = mainSourceSet.getRuntimeClasspath();
+      classesOutputDirectories = mainSourceSet.getOutput().getClassesDirs();
+    }
+
+    // Adds each file in each classes output directory to the classes files list.
+    gradleJibLogger.info("Adding corresponding output directories of source sets to image");
+    for (File classesOutputDirectory : classesOutputDirectories) {
+      if (Files.notExists(classesOutputDirectory.toPath())) {
+        gradleJibLogger.info("\t'" + classesOutputDirectory + "' (not found, skipped)");
+        continue;
+      }
+      if (!resourcesOutputDirectory.equals(classesOutputDirectory.toPath())) {
+        gradleJibLogger.info("\t'" + classesOutputDirectory + "'");
+        try (Stream<Path> classFileStream = Files.list(classesOutputDirectory.toPath())) {
+          classFileStream.forEach(classesFiles::add);
+        }
+      }
+    }
+    if (classesFiles.isEmpty()) {
+      gradleJibLogger.warn("No classes files were found - did you compile your project?");
+    }
+
     // Adds all other files to the dependencies files list.
-    FileCollection allFiles = mainSourceSet.getRuntimeClasspath();
     // Removes the classes output directories.
     allFiles = allFiles.minus(classesOutputDirectories);
     for (File dependencyFile : allFiles) {
@@ -107,18 +140,39 @@ class GradleLayerConfigurations {
       }
     }
 
+    // Adds all the META-INF files.
+    if (metaInfDirectory != null && Files.exists(metaInfDirectory)) {
+      try (Stream<Path> s = Files.list(metaInfDirectory)) {
+        metaInfFiles = s.collect(Collectors.toList());
+      }
+    }
+
+    // Adds all the WEB-INF files.
+    if (webInfDirectory != null && Files.exists(webInfDirectory)) {
+      try (Stream<Path> s = Files.list(webInfDirectory)) {
+        webInfFiles = s.collect(Collectors.toList());
+      }
+    }
+
     // Sorts all files by path for consistent ordering.
     Collections.sort(dependenciesFiles);
     Collections.sort(snapshotDependenciesFiles);
     Collections.sort(resourcesFiles);
     Collections.sort(classesFiles);
     Collections.sort(extraFiles);
+    Collections.sort(webAppFiles);
+    Collections.sort(webInfFiles);
+    Collections.sort(metaInfFiles);
 
     return JavaLayerConfigurations.builder()
         .setDependenciesFiles(dependenciesFiles)
         .setSnapshotDependenciesFiles(snapshotDependenciesFiles)
         .setResourcesFiles(resourcesFiles)
         .setClassesFiles(classesFiles)
+        .setWebAppFiles(webAppFiles)
+        .setMetaInfFiles(metaInfFiles)
+        .setWebInfFiles(webInfFiles)
+        .setWebAppRoot(webAppRoot)
         .setExtraFiles(extraFiles)
         .build();
   }

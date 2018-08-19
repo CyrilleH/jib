@@ -19,11 +19,18 @@ package com.google.cloud.tools.jib.gradle;
 import com.google.cloud.tools.jib.image.ImageFormat;
 import com.google.cloud.tools.jib.image.json.BuildableManifestTemplate;
 import com.google.common.base.Preconditions;
+import java.io.File;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
+import org.gradle.api.Project;
+import org.gradle.api.model.ObjectFactory;
+import org.gradle.api.provider.Property;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Optional;
 
 /**
@@ -41,6 +48,18 @@ public class ContainerParameters {
   private ImageFormat format = ImageFormat.Docker;
   private List<String> ports = Collections.emptyList();
   private Map<String, String> labels = Collections.emptyMap();
+
+  private Property<Path> metaInfDirectory;
+  private Property<Path> webInfDirectory;
+  @Nullable private String webAppRoot;
+
+  @Inject
+  public ContainerParameters(Project project) {
+    ObjectFactory objectFactory = project.getObjects();
+
+    metaInfDirectory = objectFactory.property(Path.class);
+    webInfDirectory = objectFactory.property(Path.class);
+  }
 
   @Input
   @Optional
@@ -121,6 +140,59 @@ public class ContainerParameters {
 
   public void setPorts(List<String> ports) {
     this.ports = ports;
+  }
+
+  @Input
+  @Nullable
+  @Optional
+  public String getWebAppRoot() {
+    return webAppRoot;
+  }
+
+  public void setWebAppRoot(String webAppRoot) {
+    this.webAppRoot = webAppRoot;
+  }
+
+  public void setMetaInfDirectory(File metaInfDirectory) {
+    this.metaInfDirectory.set(metaInfDirectory.toPath());
+  }
+
+  public void setWebInfDirectory(File webInfDirectory) {
+    this.webInfDirectory.set(webInfDirectory.toPath());
+  }
+
+  @Input
+  @Nullable
+  @Optional
+  String getWebInfDirectory() {
+    // Gradle warns about @Input annotations on File objects, so we have to expose a getter for a
+    // String to make them go away.
+    return webInfDirectory.isPresent() ? webInfDirectory.get().toString() : null;
+  }
+
+  @Internal
+  @Nullable
+  @Optional
+  Path getWebInfDirectoryPath() {
+    // TODO: Should inform user about nonexistent directory if using custom directory.
+    return webInfDirectory.isPresent() ? webInfDirectory.get() : null;
+  }
+
+  @Input
+  @Nullable
+  @Optional
+  String getMetaInfDirectory() {
+    // Gradle warns about @Input annotations on File objects, so we have to expose a getter for a
+    // String to make them go away.
+    return metaInfDirectory.isPresent() ? metaInfDirectory.get().toString() : null;
+  }
+
+  @Internal
+  @Nullable
+  @Optional
+  Path getMetaInfDirectoryPath() {
+    // TODO: Should inform user about nonexistent directory if using custom directory.
+    return metaInfDirectory.isPresent() ? metaInfDirectory.get() : null;
   }
 
   @Input

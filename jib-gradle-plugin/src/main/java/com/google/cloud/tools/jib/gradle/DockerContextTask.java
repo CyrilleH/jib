@@ -24,6 +24,7 @@ import com.google.cloud.tools.jib.plugins.common.HelpfulSuggestions;
 import com.google.common.base.Preconditions;
 import com.google.common.io.InsecureRecursiveDeleteException;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -105,10 +106,25 @@ public class DockerContextTask extends DefaultTask implements JibTask {
     GradleJibLogger gradleJibLogger = new GradleJibLogger(getLogger());
     jibExtension.handleDeprecatedParameters(gradleJibLogger);
     ConfigurationPropertyValidator.checkHttpTimeoutProperty(GradleException::new);
+    final String webAppRoot =
+        jibExtension.getContainer() != null ? jibExtension.getContainer().getWebAppRoot() : null;
+    final Path metaInfDirectory =
+        jibExtension.getContainer() != null
+            ? jibExtension.getContainer().getMetaInfDirectoryPath()
+            : null;
+    final Path webInfDirectory =
+        jibExtension.getContainer() != null
+            ? jibExtension.getContainer().getWebInfDirectoryPath()
+            : null;
 
     GradleProjectProperties gradleProjectProperties =
         GradleProjectProperties.getForProject(
-            getProject(), gradleJibLogger, jibExtension.getExtraDirectoryPath());
+            getProject(),
+            gradleJibLogger,
+            jibExtension.getExtraDirectoryPath(),
+            webAppRoot,
+            metaInfDirectory,
+            webInfDirectory);
     String targetDir = getTargetDir();
 
     List<String> entrypoint = jibExtension.getContainer().getEntrypoint();

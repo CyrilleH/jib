@@ -27,6 +27,7 @@ import com.google.cloud.tools.jib.plugins.common.BuildStepsRunner;
 import com.google.cloud.tools.jib.plugins.common.ConfigurationPropertyValidator;
 import com.google.cloud.tools.jib.plugins.common.HelpfulSuggestions;
 import com.google.common.base.Preconditions;
+import java.nio.file.Path;
 import javax.annotation.Nullable;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
@@ -72,10 +73,25 @@ public class BuildDockerTask extends DefaultTask implements JibTask {
 
     // Asserts required @Input parameters are not null.
     Preconditions.checkNotNull(jibExtension);
+    final String webAppRoot =
+        jibExtension.getContainer() != null ? jibExtension.getContainer().getWebAppRoot() : null;
+    final Path metaInfDirectory =
+        jibExtension.getContainer() != null
+            ? jibExtension.getContainer().getMetaInfDirectoryPath()
+            : null;
+    final Path webInfDirectory =
+        jibExtension.getContainer() != null
+            ? jibExtension.getContainer().getWebInfDirectoryPath()
+            : null;
     GradleJibLogger gradleJibLogger = new GradleJibLogger(getLogger());
     GradleProjectProperties gradleProjectProperties =
         GradleProjectProperties.getForProject(
-            getProject(), gradleJibLogger, jibExtension.getExtraDirectoryPath());
+            getProject(),
+            gradleJibLogger,
+            jibExtension.getExtraDirectoryPath(),
+            webAppRoot,
+            metaInfDirectory,
+            webInfDirectory);
 
     GradleHelpfulSuggestionsBuilder gradleHelpfulSuggestionsBuilder =
         new GradleHelpfulSuggestionsBuilder(HELPFUL_SUGGESTIONS_PREFIX, jibExtension);

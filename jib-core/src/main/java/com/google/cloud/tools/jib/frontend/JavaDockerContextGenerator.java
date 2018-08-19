@@ -58,6 +58,9 @@ public class JavaDockerContextGenerator {
   private static final String RESOURCES_LAYER_DIRECTORY = "resources";
   private static final String CLASSES_LAYER_DIRECTORY = "classes";
   private static final String EXTRA_FILES_LAYER_DIRECTORY = "root";
+  private static final String WEBAPP_LAYER_DIRECTORY = "webapp";
+  private static final String WEB_INF_LAYER_DIRECTORY = "web-inf";
+  private static final String META_INF_LAYER_DIRECTORY = "meta-inf";
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -92,7 +95,7 @@ public class JavaDockerContextGenerator {
       ImmutableList.Builder<CopyDirective> listBuilder,
       LayerEntry layerEntry,
       String directoryInContext) {
-    if (layerEntry.getSourceFiles().isEmpty()) {
+    if (layerEntry == null || layerEntry.getSourceFiles().isEmpty()) {
       return;
     }
 
@@ -156,6 +159,18 @@ public class JavaDockerContextGenerator {
         copyDirectivesBuilder,
         javaLayerConfigurations.getResourcesLayerEntry(),
         RESOURCES_LAYER_DIRECTORY);
+    addIfNotEmpty(
+        copyDirectivesBuilder,
+        javaLayerConfigurations.getWebAppFilesLayerEntry(),
+        WEBAPP_LAYER_DIRECTORY);
+    addIfNotEmpty(
+        copyDirectivesBuilder,
+        javaLayerConfigurations.getMetaInfFilesLayerEntry(),
+        META_INF_LAYER_DIRECTORY);
+    addIfNotEmpty(
+        copyDirectivesBuilder,
+        javaLayerConfigurations.getWebInfFilesLayerEntry(),
+        WEB_INF_LAYER_DIRECTORY);
     addIfNotEmpty(
         copyDirectivesBuilder,
         javaLayerConfigurations.getClassesLayerEntry(),

@@ -57,6 +57,10 @@ import org.gradle.api.tasks.Optional;
  *     mainClass = ‘com.mycompany.myproject.Main’
  *     args = ['arg1', 'arg2']
  *     exposedPorts = ['1000', '2000-2010', '3000']
+ *     entrypoint = ['catalina.sh', 'run']
+ *     webAppRoot = '/usr/local/tomcat/webapps'
+ *     metaInfDirectory = file('src/main/custom-meta-inf-dir')
+ *     webInfDirectory = file('src/main/custom-web-inf-dir')
  *     format = OCI
  *   }
  * }
@@ -94,7 +98,7 @@ public class JibExtension {
 
     from = objectFactory.newInstance(ImageParameters.class, "jib.from");
     to = objectFactory.newInstance(ImageParameters.class, "jib.to");
-    container = objectFactory.newInstance(ContainerParameters.class);
+    container = objectFactory.newInstance(ContainerParameters.class, project);
 
     jvmFlags = objectFactory.listProperty(String.class);
     mainClass = objectFactory.property(String.class);
