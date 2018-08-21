@@ -161,16 +161,16 @@ public class JavaDockerContextGenerator {
         RESOURCES_LAYER_DIRECTORY);
     addIfNotEmpty(
         copyDirectivesBuilder,
-        javaLayerConfigurations.getWebAppFilesLayerEntry(),
-        WEBAPP_LAYER_DIRECTORY);
-    addIfNotEmpty(
-        copyDirectivesBuilder,
         javaLayerConfigurations.getMetaInfFilesLayerEntry(),
         META_INF_LAYER_DIRECTORY);
     addIfNotEmpty(
         copyDirectivesBuilder,
         javaLayerConfigurations.getWebInfFilesLayerEntry(),
         WEB_INF_LAYER_DIRECTORY);
+    addIfNotEmpty(
+        copyDirectivesBuilder,
+        javaLayerConfigurations.getWebAppFilesLayerEntry(),
+        WEBAPP_LAYER_DIRECTORY);
     addIfNotEmpty(
         copyDirectivesBuilder,
         javaLayerConfigurations.getClassesLayerEntry(),
